@@ -1,0 +1,106 @@
+<html>
+<meta charset="UTF-8"/>
+<head>
+    <title>Bootstrap Polukruglye Plashki</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Подключаем Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <style>
+        /* Стиль для полукруглых плашек */
+        .rounded-half {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 50px;
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        /* Стиль для перетаскивания плашек */
+        .draggable {
+            position: absolute;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+<!-- Создаем контейнер для полукруглых плашек -->
+<div class="container">
+    <div class="row" id="plaques-container"></div>
+</div>
+
+<!-- Подключаем Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script>
+    // Загружаем данные для плашек из API Flask
+    fetch('/plaques')
+        .then(response => response.json())
+        .then(plaques => {
+            // Создаем полукруглые плашки и добавляем их в контейнер
+            const plaquesContainer = document.getElementById('plaques-container');
+            plaques.forEach(plaque => {
+                const plaqueElement = document.createElement('div');
+                plaqueElement.classList.add('rounded-half', 'draggable');
+                plaqueElement.setAttribute('data-id', plaque.id);
+                plaqueElement.textContent = plaque.name;
+                plaqueElement.style.left = plaque.x + 'px';
+                plaqueElement.style.top = plaque.y + 'px';
+                plaquesContainer.appendChild(plaqueElement);
+            });
+        });
+
+    // Сохраняем элемент, который сейчас зажат
+    var draggedElement = null;
+
+    // Добавляем возможность перетаскивать плашки
+    document.addEventListener('mousedown', function (e) {
+        // Проверяем, что клик был на полукруглой плашке
+        if (e.target.classList.contains('rounded-half')) {
+            // Сохраняем элемент, который сейчас зажат
+            draggedElement = e.target;
+            // Отключаем стандартную обработку клика, чтобы плашка не уходила на своё место
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('mousemove', function (e) {
+        // Проверяем, что сейчас зажата плашка
+        if (draggedElement) {
+            // Устанавливаем позицию плашки равной текущей позиции мыши
+            draggedElement.style.left = e.pageX - draggedElement.offsetWidth / 2 + 'px';
+            draggedElement.style.top = e.pageY - draggedElement.offsetHeight / 2 + 'px';
+
+            // Сохраняем данные о новой позиции плашки в API
+            var data = new FormData();
+            data.append('id', draggedElement.dataset.id);
+            data.append('left', draggedElement.style.left);
+            data.append('top', draggedElement.style.top);
+
+            fetch('/update_position', {
+                method: 'POST',
+                body: data
+            }).then(function (response) {
+                console.log('Position saved!');
+            }).catch(function (error) {
+                console.error(error);
+            });
+        }
+    });
+
+    document.addEventListener('mouseup', function (e) {
+        // Проверяем, что сейчас зажата плашка
+        if (draggedElement) {
+            // Сбрасываем зажатый элемент
+            draggedElement = null;
+        }
+    });
+
+</script>
+</body>
+</html>
